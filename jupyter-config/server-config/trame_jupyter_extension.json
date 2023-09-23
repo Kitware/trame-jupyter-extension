@@ -1,0 +1,7 @@
+{
+  "ServerApp": {
+    "jpserver_extensions": {
+      "trame_jupyter_extension": true
+    }
+  }
+}
