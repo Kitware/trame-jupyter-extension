@@ -25,12 +25,21 @@ def write_static_www(*modules):
 # Generate static content
 write_static_www(*os.environ.get("TRAME_MODULES", "").split(","))
 
+#
+class WorkingDirectoryProvider(APIHandler):
+    @tornado.web.authenticated
+    def get(self):
+        self.finish(f'{{ "www": "{TRAME_STATIC_WWW}" }}')
+
+
 def setup_handlers(web_app):
     host_pattern = ".*$"
 
     base_url = web_app.settings["base_url"]
+    api = url_path_join(base_url, "trame-jupyter-server", "location")
     static = url_path_join(base_url, "trame-jupyter-server", "(.*)")
     handlers = [
+        (api, WorkingDirectoryProvider),
         (static, tornado.web.StaticFileHandler, dict(path=TRAME_STATIC_WWW)),
     ]
     web_app.add_handlers(host_pattern, handlers)
