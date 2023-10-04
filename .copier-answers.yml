@@ -1,0 +1,19 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.2.1
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: sebastien.jourdain@kitware.com
+author_name: Kitware Inc.
+data_format: string
+file_extension: ''
+has_binder: false
+has_settings: false
+kind: server
+labextension_name: trame-jupyter-extension
+mimetype: ''
+mimetype_name: ''
+project_short_description: A JupyterLab extension for trame communication layer
+python_name: trame_jupyter_extension
+repository: https://github.com/Kitware/trame-jupyter-extension
+test: false
+viewer_name: ''
+
