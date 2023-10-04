@@ -1,5 +1,5 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import { SessionContext, ISessionContext } from '@jupyterlab/apputils';
+import { SessionContext } from '@jupyterlab/apputils';
 import {
   IKernelConnection,
   IModel as IModelKernel
