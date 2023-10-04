@@ -1,7 +1,5 @@
-import {
-  IKernelConnection,
-  IComm
-} from '@jupyterlab/services/lib/kernel/kernel';
+import { IComm } from '@jupyterlab/services/lib/kernel/kernel';
+import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import {
   ICommMsgMsg,
   ICommCloseMsg
@@ -20,7 +18,7 @@ export type CommEvents = {
 
 export class TrameJupyterComm extends ConcreteEmitter<CommEvents> {
   private kernel: IKernelConnection;
-  private comm: IComm | null;
+  private comm: IComm | undefined | null;
 
   constructor(kernel: IKernelConnection) {
     super();
@@ -32,9 +30,13 @@ export class TrameJupyterComm extends ConcreteEmitter<CommEvents> {
   open(): void {
     if (!this.comm || this.comm.isDisposed) {
       this.comm = this.kernel.createComm('wslink_comm');
-      this.comm.open();
-      this.comm.onMsg = this.onMessage.bind(this);
-      this.comm.onClose = this.onClose.bind(this);
+      if (this.comm) {
+        this.comm.open();
+        this.comm.onMsg = this.onMessage.bind(this);
+        this.comm.onClose = this.onClose.bind(this);
+      } else {
+        console.error('trame::comm::open - No comm');
+      }
     }
   }
 

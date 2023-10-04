@@ -1,28 +1,24 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import { SessionContext } from '@jupyterlab/apputils';
 import {
   IKernelConnection,
   IModel as IModelKernel
 } from '@jupyterlab/services/lib/kernel/kernel';
 import { URLExt } from '@jupyterlab/coreutils';
 import { ServerConnection } from '@jupyterlab/services';
+import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
 
 export class ActiveManager {
   app: JupyterFrontEnd;
   www: string;
   sessionToKernel: Record<string, IModelKernel>;
   kernels: Record<string, IKernelConnection>;
-  sessionCtx: SessionContext;
+  sessionConnections: Record<string, ISessionConnection>;
 
   constructor(app: JupyterFrontEnd) {
     this.app = app;
     this.sessionToKernel = {};
     this.kernels = {};
-    this.sessionCtx = new SessionContext({
-      sessionManager: app.serviceManager.sessions,
-      specsManager: app.serviceManager.kernelspecs,
-      name: 'TrameHelper',
-    });
+    this.sessionConnections = {};
     this.www = '';
     this.updateExtensionLocation();
   }
@@ -70,27 +66,64 @@ export class ActiveManager {
     const runningSessions = this.app.serviceManager.sessions.running();
     let session = null;
     while ((session = runningSessions.next())) {
-      if (session?.kernel) {
-        this.sessionToKernel[session.name] = session.kernel;
-        const kernelId = session.kernel.id;
+      if (!this.sessionConnections[session.id]) {
+        const sessionConnection = this.app.serviceManager.sessions.connectTo({
+          model: session
+        });
+        this.sessionConnections[session.id] = sessionConnection;
 
-        // Create a connection by default and set ENV on kernel
-        if (!this.kernels[kernelId]) {
-          // const kernelConnection = this.app.serviceManager.kernels.connectTo({
-          //   model: session.kernel,
-          //   handleComms: true
-          // });
-          // this.kernels[kernelId] = kernelConnection;
-          // kernelConnection.requestExecute({
-          //   silent: true,
-          //   code: `
-          //     import os
-          //     os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
-          //     os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
-          //     os.environ["TRAME_BACKEND"] = "jupyter"
-          //     os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
-          //   `
-          // });
+        sessionConnection.kernelChanged.connect(
+          (sessionConnection, kernelChange) => {
+            if (!kernelChange.newValue) {
+              // Not sure what I need to do...
+              if (kernelChange.oldValue) {
+                console.log(
+                  'Need to dispose kernel',
+                  kernelChange.oldValue?.id,
+                  'on session',
+                  sessionConnection.id
+                );
+                delete this.kernels[kernelChange.oldValue.id];
+              }
+            } else if (!kernelChange.oldValue) {
+              console.log(
+                'New kernel',
+                kernelChange.newValue.id,
+                'on session',
+                sessionConnection.id
+              );
+              if (sessionConnection.kernel) {
+                sessionConnection.kernel.requestExecute({
+                  silent: true,
+                  code: `
+                      import os
+                      os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
+                      os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
+                      os.environ["TRAME_BACKEND"] = "jupyter"
+                      os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
+                    `
+                });
+                this.kernels[sessionConnection.kernel.id] =
+                  sessionConnection.kernel;
+              }
+            } else {
+              console.log('kernelChanged ???', sessionConnection, kernelChange);
+            }
+          }
+        );
+
+        if (sessionConnection?.kernel) {
+          sessionConnection.kernel.requestExecute({
+            silent: true,
+            code: `
+                  import os
+                  os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
+                  os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
+                  os.environ["TRAME_BACKEND"] = "jupyter"
+                  os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
+                `
+          });
+          this.kernels[sessionConnection.kernel.id] = sessionConnection.kernel;
         }
       }
     }
