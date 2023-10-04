@@ -1,6 +1,6 @@
 {
     "name": "trame-jupyter-extension",
-    "version": "0.1.3",
+    "version": "1.0.0",
     "description": "A JupyterLab extension for trame communication layer",
     "keywords": [
         "jupyter",
