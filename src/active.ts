@@ -10,6 +10,7 @@ import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
 export class ActiveManager {
   app: JupyterFrontEnd;
   www: string;
+  endpoint: string;
   sessionToKernel: Record<string, IModelKernel>;
   kernels: Record<string, IKernelConnection>;
   sessionConnections: Record<string, ISessionConnection>;
@@ -20,6 +21,7 @@ export class ActiveManager {
     this.kernels = {};
     this.sessionConnections = {};
     this.www = '';
+    this.endpoint = '/trame-jupyter-server';
     this.updateExtensionLocation();
   }
 
@@ -33,6 +35,7 @@ export class ActiveManager {
 
   async updateExtensionLocation(): Promise<void> {
     const settings = ServerConnection.makeSettings();
+    this.endpoint = URLExt.join(settings.baseUrl, 'trame-jupyter-server');
     const requestUrl = URLExt.join(
       settings.baseUrl,
       'trame-jupyter-server',
@@ -60,6 +63,17 @@ export class ActiveManager {
     }
 
     this.finishInitialization();
+  }
+
+  getKernelCode(): string {
+    return `
+      import os
+      os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
+      os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
+      os.environ["TRAME_BACKEND"] = "jupyter"
+      os.environ["TRAME_JUPYTER_WWW"] = "${this.www}"
+      os.environ["TRAME_JUPYTER_ENDPOINT"] = "${this.endpoint}"
+    `;
   }
 
   updateSessionMapping(): void {
@@ -95,13 +109,7 @@ export class ActiveManager {
               if (sessionConnection.kernel) {
                 sessionConnection.kernel.requestExecute({
                   silent: true,
-                  code: `
-                      import os
-                      os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
-                      os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
-                      os.environ["TRAME_BACKEND"] = "jupyter"
-                      os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
-                    `
+                  code: this.getKernelCode()
                 });
                 this.kernels[sessionConnection.kernel.id] =
                   sessionConnection.kernel;
@@ -115,13 +123,7 @@ export class ActiveManager {
         if (sessionConnection?.kernel) {
           sessionConnection.kernel.requestExecute({
             silent: true,
-            code: `
-                  import os
-                  os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
-                  os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
-                  os.environ["TRAME_BACKEND"] = "jupyter"
-                  os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
-                `
+            code: this.getKernelCode()
           });
           this.kernels[sessionConnection.kernel.id] = sessionConnection.kernel;
         }
