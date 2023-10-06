@@ -1,8 +1,5 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import {
-  IKernelConnection,
-  IModel as IModelKernel
-} from '@jupyterlab/services/lib/kernel/kernel';
+import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { URLExt } from '@jupyterlab/coreutils';
 import { ServerConnection } from '@jupyterlab/services';
 import { ISessionConnection } from '@jupyterlab/services/lib/session/session';
@@ -11,13 +8,11 @@ export class ActiveManager {
   app: JupyterFrontEnd;
   www: string;
   endpoint: string;
-  sessionToKernel: Record<string, IModelKernel>;
   kernels: Record<string, IKernelConnection>;
   sessionConnections: Record<string, ISessionConnection>;
 
   constructor(app: JupyterFrontEnd) {
     this.app = app;
-    this.sessionToKernel = {};
     this.kernels = {};
     this.sessionConnections = {};
     this.www = '';
@@ -129,15 +124,6 @@ export class ActiveManager {
         }
       }
     }
-  }
-
-  getActiveKernel(): IModelKernel | null {
-    const pathTokens = window.location.pathname.split('/');
-    const activeName = pathTokens[pathTokens.length - 1];
-    if (activeName) {
-      return this.sessionToKernel[activeName];
-    }
-    return null;
   }
 
   getKernelConnection(kernelId: string): IKernelConnection | null {
