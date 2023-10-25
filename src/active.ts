@@ -1,22 +1,19 @@
 import { JupyterFrontEnd } from '@jupyterlab/application';
-import {
-  IKernelConnection,
-  IModel as IModelKernel
-} from '@jupyterlab/services/lib/kernel/kernel';
+import { IKernelConnection } from '@jupyterlab/services/lib/kernel/kernel';
 import { URLExt } from '@jupyterlab/coreutils';
 import { ServerConnection } from '@jupyterlab/services';
 
 export class ActiveManager {
   app: JupyterFrontEnd;
   www: string;
-  sessionToKernel: Record<string, IModelKernel>;
+  endpoint: string;
   kernels: Record<string, IKernelConnection>;
 
   constructor(app: JupyterFrontEnd) {
     this.app = app;
-    this.sessionToKernel = {};
     this.kernels = {};
     this.www = '';
+    this.endpoint = '/trame-jupyter-server';
     this.updateExtensionLocation();
   }
 
@@ -30,6 +27,7 @@ export class ActiveManager {
 
   async updateExtensionLocation() {
     const settings = ServerConnection.makeSettings();
+    this.endpoint = URLExt.join(settings.baseUrl, 'trame-jupyter-server');
     const requestUrl = URLExt.join(
       settings.baseUrl,
       'trame-jupyter-server',
@@ -59,6 +57,17 @@ export class ActiveManager {
     this.finishInitialization();
   }
 
+  getKernelCode(): string {
+    return `
+      import os
+      os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
+      os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
+      os.environ["TRAME_BACKEND"] = "jupyter"
+      os.environ["TRAME_JUPYTER_WWW"] = "${this.www}"
+      os.environ["TRAME_JUPYTER_ENDPOINT"] = "${this.endpoint}"
+    `;
+  }
+
   updateSessionMapping() {
     const runningSessions = this.app.serviceManager.sessions.running();
     let entry = null;
@@ -66,7 +75,6 @@ export class ActiveManager {
       entry = runningSessions.next();
       const session = entry.value;
       if (session?.kernel) {
-        this.sessionToKernel[session.name] = session.kernel;
         const kernelId = session.kernel.id;
 
         // Create a connection by default and set ENV on kernel
@@ -79,25 +87,11 @@ export class ActiveManager {
 
           kernelConnection.requestExecute({
             silent: true,
-            code: `
-              import os
-              os.environ["TRAME_DISABLE_V3_WARNING"] = "1"
-              os.environ["TRAME_IFRAME_BUILDER"] = "jupyter-extension"
-              os.environ["TRAME_BACKEND"] = "jupyter"
-              os.environ["TRAME_JUPYTER_EXTENSION"] = "${this.www}"
-            `
+            code: this.getKernelCode(),
           });
         }
       }
     } while (!entry.done);
-  }
-
-  getActiveKernel(): IModelKernel | null {
-    const activeName = window.location.pathname.split('/').at(-1);
-    if (activeName) {
-      return this.sessionToKernel[activeName];
-    }
-    return null;
   }
 
   getKernelConnection(kernelId: string): IKernelConnection | null {
