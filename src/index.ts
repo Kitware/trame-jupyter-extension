@@ -1,11 +1,43 @@
+import { IDisposable } from '@lumino/disposable';
+
 import {
   JupyterFrontEnd,
   JupyterFrontEndPlugin
 } from '@jupyterlab/application';
 
-import { ActiveManager } from './active';
+import { DocumentRegistry } from '@jupyterlab/docregistry';
+import { NotebookPanel, INotebookModel } from '@jupyterlab/notebook';
+import { Kernel } from '@jupyterlab/services';
+
 import { TrameJupyterComm } from './comm';
 import { TrameJupyterWebSocket } from './websocket';
+import { ContextManager } from './manager';
+import { Registry } from './registry';
+import { getExtensionLocation } from './location';
+
+/**
+ * A notebook widget extension that creates a kernel manager each time a notebook is opened.
+ */
+export class WidgetExtension
+  implements DocumentRegistry.IWidgetExtension<NotebookPanel, INotebookModel>
+{
+  private _endpoint: string;
+  private _www: string;
+
+  constructor(endpoint: string, www: string) {
+    this._endpoint = endpoint;
+    this._www = www;
+  }
+
+  createNew(
+    _panel: NotebookPanel,
+    context: DocumentRegistry.IContext<INotebookModel>
+  ): IDisposable {
+    const manager = new ContextManager(context, this._endpoint, this._www);
+
+    return manager;
+  }
+}
 
 /**
  * Initialization data for the trame-jupyter-extension extension.
@@ -14,41 +46,52 @@ const plugin: JupyterFrontEndPlugin<void> = {
   id: 'trame-jupyter-extension:plugin',
   description: 'A JupyterLab extension for trame communication layer',
   autoStart: true,
-  activate: (app: JupyterFrontEnd) => {
-    const activeManager = new ActiveManager(app);
-    const comms: Record<string, TrameJupyterComm> = {};
+  activate: async (app: JupyterFrontEnd) => {
+    const kernelsRegistry = new Registry<Kernel.IKernelConnection>();
+    const commsRegistry = new Registry<TrameJupyterComm>();
 
     function init(childWindow: any) {
       const kernelId = childWindow.frameElement.dataset.kernelId;
-      if (!comms[kernelId]) {
-        const kc = activeManager.getKernelConnection(kernelId);
-        if (!kc) {
-          throw new Error(
-            `trame: Could not get kernel connection to ${kernelId}`
-          );
-        }
-        comms[kernelId] = new TrameJupyterComm(kc);
+      const kc = kernelsRegistry.getItem(kernelId);
+      let comm = commsRegistry.getItem(kernelId);
 
-        // Open kernel connection at creation
-        comms[kernelId].open();
+      if (!kc) {
+        throw new Error(
+          `trame: Could not get kernel connection to ${kernelId}`
+        );
       }
-      if (comms[kernelId]) {
-        return {
-          createWebSocket: () => {
-            return new TrameJupyterWebSocket(childWindow, comms[kernelId]);
-          }
-        };
+
+      if (!comm || !comm.isUseable()) {
+        comm = new TrameJupyterComm(kc);
+        comm.open();
+        commsRegistry.setItem(kernelId, comm);
+        comm.addEventListener('close', () => {
+          commsRegistry.setItem(kernelId, null);
+        });
       }
+
+      return {
+        createWebSocket: () => {
+          return new TrameJupyterWebSocket(childWindow, comm!);
+        }
+      };
     }
 
     const namespace = {
       app,
-      activeManager,
-      comms,
+      kernelsRegistry,
+      commsRegistry,
       init
     };
 
     (window as any).trameJupyter = namespace;
+
+    const { endpoint, www } = await getExtensionLocation();
+
+    app.docRegistry.addWidgetExtension(
+      'Notebook',
+      new WidgetExtension(endpoint, www)
+    );
   }
 };
 
