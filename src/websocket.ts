@@ -29,10 +29,11 @@ function isArrayBufferView(
 
 export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
   private window: any;
-  private comm: any;
+  private comm: TrameJupyterComm;
   private clientId: string;
   private serverName: string;
-  private commListener: (msg: CommMessage) => void;
+  private commMessageListener: (msg: CommMessage) => void;
+  private commCloseListener: () => void;
   public readyState: number;
 
   constructor(w: Window, comm: TrameJupyterComm) {
@@ -51,7 +52,7 @@ export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
     // Setup comm
     this.window = w;
     this.comm = comm;
-    this.commListener = (msg: CommMessage) => {
+    this.commMessageListener = (msg: CommMessage) => {
       const { data, buffers } = msg;
       const { server, client, payload } = data;
 
@@ -74,8 +75,22 @@ export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
         this.emit('message', { data: payload });
       }
     };
-    this.comm.addEventListener('message', this.commListener);
-    this.window.addEventListener('unload', () => this.close()); // close on exit
+
+    this.commCloseListener = () => this.close();
+
+    // Don't open the fake websocket if the comm is unusable
+    if (!comm.isUseable()) {
+      console.error(
+        "Can't create a TrameJupyterWebSocket using a closed kernel connection"
+      );
+      this.readyState = 3;
+
+      return;
+    }
+
+    this.comm.addEventListener('message', this.commMessageListener);
+    this.comm.addEventListener('close', this.commCloseListener);
+    this.window.addEventListener('unload', this.commCloseListener); // close on exit
 
     // Let the ws know that we are ready
     setTimeout(() => {
@@ -84,8 +99,10 @@ export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
     }, 0);
   }
 
-  close(): void {
-    this.comm.removeEventListener('message', this.commListener);
+  close() {
+    this.comm.removeEventListener('message', this.commMessageListener);
+    this.comm.removeEventListener('close', this.commCloseListener);
+    this.readyState = 3;
     // notify the kernel that the client is disconnected
     console.log('trame::jupyter-comm::close', 'FIXME');
 
