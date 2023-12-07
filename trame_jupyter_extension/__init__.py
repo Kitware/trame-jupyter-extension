@@ -32,5 +32,5 @@ def _load_jupyter_server_extension(server_app):
         JupyterLab application instance
     """
     setup_handlers(server_app.web_app)
-    name = "trame_jupyter_extension"
+    name = "trame-jupyter-extension"
     server_app.log.info(f"Registered {name} server extension")

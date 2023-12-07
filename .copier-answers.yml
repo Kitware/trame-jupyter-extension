@@ -12,7 +12,7 @@ labextension_name: trame-jupyter-extension
 mimetype: ''
 mimetype_name: ''
 project_short_description: A JupyterLab extension for trame communication layer
-python_name: trame_jupyter_extension
+python_name: trame-jupyter-extension
 repository: https://github.com/Kitware/trame-jupyter-extension
 test: false
 viewer_name: ''

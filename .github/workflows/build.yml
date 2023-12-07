@@ -44,7 +44,7 @@ jobs:
 
         pip install build
         python -m build
-        pip uninstall -y "trame_jupyter_extension" jupyterlab
+        pip uninstall -y "trame-jupyter-extension" jupyterlab
 
     - name: Upload extension packages
       uses: actions/upload-artifact@v3
