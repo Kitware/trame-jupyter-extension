@@ -84,7 +84,8 @@ const plugin: JupyterFrontEndPlugin<void> = {
       app,
       kernelsRegistry,
       commsRegistry,
-      init
+      init,
+      updateOutputs
     };
 
     (window as any).trameJupyter = namespace;

@@ -1,8 +1,10 @@
 export function updateOutputs() {
   const full = document.querySelectorAll<HTMLElement>(
-    '.jp-LinkedOutputView iframe[id^=trame]'
+    '.jp-LinkedOutputView iframe[id*=trame__template]'
   );
-  const all = document.querySelectorAll<HTMLElement>('iframe[id^=trame]');
+  const all = document.querySelectorAll<HTMLElement>(
+    'iframe[id*=trame__template]'
+  );
   const visibleInFullScreen: Record<string, boolean> = {};
   const moveToFullScreen: Array<HTMLElement> = [];
 
