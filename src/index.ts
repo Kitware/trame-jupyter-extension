@@ -14,6 +14,7 @@ import { TrameJupyterWebSocket } from './websocket';
 import { ContextManager } from './manager';
 import { Registry } from './registry';
 import { getExtensionLocation } from './location';
+import { updateOutputs } from './utils';
 
 /**
  * A notebook widget extension that creates a kernel manager each time a notebook is opened.
@@ -34,7 +35,6 @@ export class WidgetExtension
     context: DocumentRegistry.IContext<INotebookModel>
   ): IDisposable {
     const manager = new ContextManager(context, this._endpoint, this._www);
-
     return manager;
   }
 }
@@ -69,6 +69,9 @@ const plugin: JupyterFrontEndPlugin<void> = {
           commsRegistry.setItem(kernelId, null);
         });
       }
+
+      // Enable fullscreen output if any
+      updateOutputs();
 
       return {
         createWebSocket: () => {

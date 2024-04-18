@@ -5,8 +5,8 @@ type WebsocketMessage<T> = { data: T };
 
 function toBuffer(msgpack: any) {
   if (msgpack.buffer) {
-    if (msgpack.buffer.byteLength != msgpack.length) {
-      console.warn("toBuffer: deep copy")
+    if (msgpack.buffer.byteLength !== msgpack.length) {
+      console.warn('toBuffer: deep copy');
       const tmp = new Uint8Array(msgpack.length);
       tmp.set(msgpack);
       return tmp.buffer;
