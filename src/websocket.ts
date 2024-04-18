@@ -3,6 +3,19 @@ import { TrameJupyterComm, type CommMessage } from './comm';
 
 type WebsocketMessage<T> = { data: T };
 
+function toBuffer(msgpack: any) {
+  if (msgpack.buffer) {
+    if (msgpack.buffer.byteLength != msgpack.length) {
+      console.warn("toBuffer: deep copy")
+      const tmp = new Uint8Array(msgpack.length);
+      tmp.set(msgpack);
+      return tmp.buffer;
+    }
+    return msgpack.buffer;
+  }
+  return msgpack;
+}
+
 export type WebSocketEvents = {
   open: any;
   message: WebsocketMessage<any>;
@@ -20,12 +33,6 @@ export function createUniqueIdFn() {
 }
 
 const uniqueId = createUniqueIdFn();
-
-function isArrayBufferView(
-  array: ArrayBuffer | ArrayBufferView
-): array is ArrayBufferView {
-  return !!(array as any)?.buffer;
-}
 
 export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
   private window: any;
@@ -61,16 +68,13 @@ export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
       }
 
       if (buffers && buffers.length > 0) {
-        const buffer: ArrayBuffer = isArrayBufferView(buffers[0])
-          ? buffers[0].buffer
-          : buffers[0];
+        const blob = new Blob(buffers);
 
-        // Buffer is ArrayBuffer, but it doesn't pass instanceof ArrayBuffer test in session.js (??!)
-        // make it!
-        (buffer as any).constructor = this.window.ArrayBuffer;
-        (buffer as any).__proto__ = this.window.ArrayBuffer.prototype;
+        // Make it a blob for wslink
+        blob.constructor = this.window.Blob;
+        (blob as any).__proto__ = this.window.Blob.prototype;
 
-        this.emit('message', { data: buffer });
+        this.emit('message', { data: blob });
       } else {
         this.emit('message', { data: payload });
       }
@@ -122,7 +126,7 @@ export class TrameJupyterWebSocket extends ConcreteEmitter<WebSocketEvents> {
     };
 
     if (isBinary) {
-      message.buffers = [data];
+      message.buffers = [toBuffer(data)];
     } else {
       message.data.payload = data;
     }
