@@ -2,7 +2,7 @@ import os
 import tempfile
 from pathlib import Path
 
-from jupyter_server.base.handlers import APIHandler
+from jupyter_server.base.handlers import JupyterHandler
 from jupyter_server.utils import url_path_join
 import tornado
 
@@ -10,6 +10,7 @@ from trame.tools.www import StaticContentGenerator
 
 # Static directory to serve
 TRAME_STATIC_WWW = tempfile.mkdtemp()
+
 
 # Generate trame static content
 def write_static_www(*modules):
@@ -25,11 +26,20 @@ def write_static_www(*modules):
 # Generate static content
 write_static_www(*os.environ.get("TRAME_MODULES", "").split(","))
 
+
 #
-class WorkingDirectoryProvider(APIHandler):
+class WorkingDirectoryProvider(JupyterHandler):
     @tornado.web.authenticated
     def get(self):
         self.finish(f'{{ "www": "{TRAME_STATIC_WWW}" }}')
+
+
+class TrameStaticHandler(tornado.web.StaticFileHandler):
+    def set_default_headers(self):
+        self.set_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.set_header("Cross-Origin-Embedder-Policy", "require-corp")
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Cache-Control", "no-store")
 
 
 def setup_handlers(web_app):
@@ -40,6 +50,10 @@ def setup_handlers(web_app):
     static = url_path_join(base_url, "trame-jupyter-server", "(.*)")
     handlers = [
         (api, WorkingDirectoryProvider),
-        (static, tornado.web.StaticFileHandler, dict(path=TRAME_STATIC_WWW)),
+        (
+            static,
+            TrameStaticHandler,
+            dict(path=TRAME_STATIC_WWW, default_filename="index.html"),
+        ),
     ]
     web_app.add_handlers(host_pattern, handlers)
