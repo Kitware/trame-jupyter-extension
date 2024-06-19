@@ -1,3 +1,5 @@
+import os
+
 try:
     from ._version import __version__
 except ImportError:
@@ -27,15 +29,17 @@ def _load_jupyter_server_extension(server_app):
     server_app: jupyterlab.labapp.LabApp
         JupyterLab application instance
     """
-    if "headers" not in server_app.web_app.settings:
-        server_app.web_app.settings["headers"] = {}
-    server_app.web_app.settings["headers"].update(
-        {
-            # Allow access to `SharedArrayBuffer`.
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
-        }
-    )
+
+    if "TRAME_INJECT_HEADER" in os.environ:
+        if "headers" not in server_app.web_app.settings:
+            server_app.web_app.settings["headers"] = {}
+        server_app.web_app.settings["headers"].update(
+            {
+                # Allow access to `SharedArrayBuffer`.
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+            }
+        )
 
     setup_handlers(server_app.web_app)
     name = "trame-jupyter-extension"
