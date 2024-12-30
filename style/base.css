@@ -4,7 +4,7 @@
     https://jupyterlab.readthedocs.io/en/stable/developer/css.html
 */
 
-.jp-LinkedOutputView .jp-OutputArea-child:has(iframe[id*=trame__template]) {
+.jp-LinkedOutputView .jp-OutputArea-child:has(iframe[id*='trame__template']) {
   height: 100%;
 }
 

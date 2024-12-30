@@ -190,6 +190,7 @@
             "stylelint-csstree-validator"
         ],
         "rules": {
+            "selector-class-pattern": null,
             "csstree/validator": true,
             "property-no-vendor-prefix": null,
             "selector-no-vendor-prefix": null,
