@@ -1,5 +1,3 @@
-
-
 # trame-jupyter-extension ![download](https://img.shields.io/pypi/dm/trame-jupyter-extension)
 
 [![Github Actions Status](https://github.com/Kitware/trame-jupyter-extension/workflows/Build/badge.svg)](https://github.com/Kitware/trame-jupyter-extension/actions/workflows/build.yml)
